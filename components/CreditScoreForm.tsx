@@ -31,6 +31,15 @@ export default function CreditScoreForm({ signer, account }: CreditScoreFormProp
         const provider = signer.provider;
         if (!provider) {
           logger.warn("No provider available");
+          // Set default metrics if no provider
+          setWalletMetrics({
+            transactionCount: 0,
+            balance: "0",
+            walletAge: 0,
+            transactionCountScore: 0,
+            balanceScore: 0,
+            ageScore: 0,
+          });
           return;
         }
 
@@ -39,6 +48,15 @@ export default function CreditScoreForm({ signer, account }: CreditScoreFormProp
         logger.info({ metrics }, "Wallet metrics loaded");
       } catch (error: any) {
         logger.error({ error: error?.message || String(error) }, "Failed to load wallet metrics");
+        // Set default metrics on error
+        setWalletMetrics({
+          transactionCount: 0,
+          balance: "0",
+          walletAge: 0,
+          transactionCountScore: 0,
+          balanceScore: 0,
+          ageScore: 0,
+        });
       } finally {
         setAnalyzingWallet(false);
       }
