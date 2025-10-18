@@ -40,45 +40,21 @@ export default function Home() {
 
       // Check current network
       const network = await provider.getNetwork();
-      const targetChainId = "0x7a69"; // 31337 in hex
+      const expectedChainId = Number(process.env.NEXT_PUBLIC_CHAIN_ID || "11155111");
+      const targetChainId = `0x${expectedChainId.toString(16)}`;
 
-      // If not on localhost network, switch or add it
-      if (network.chainId !== BigInt(31337)) {
+      // If not on expected network, switch to it
+      if (network.chainId !== BigInt(expectedChainId)) {
         try {
-          // Try to switch to localhost network
+          // Try to switch to the expected network
           await provider.send("wallet_switchEthereumChain", [
             { chainId: targetChainId },
           ]);
         } catch (switchError: any) {
-          // Network doesn't exist (error code 4902) or other error, try adding
-          if (switchError.code === 4902 || switchError.code === -32603) {
-            logger.info("Network not found, adding Localhost 8545...");
-            try {
-              await provider.send("wallet_addEthereumChain", [
-                {
-                  chainId: targetChainId,
-                  chainName: "Localhost 31337",
-                  nativeCurrency: {
-                    name: "Ethereum",
-                    symbol: "ETH",
-                    decimals: 18,
-                  },
-                  rpcUrls: ["http://127.0.0.1:8545"],
-                },
-              ]);
-              logger.info("Network added successfully");
-            } catch (addError: any) {
-              logger.error("Error adding network:", addError?.message || String(addError));
-              alert("Failed to add localhost network. Please add it manually.");
-              setLoading(false);
-              return;
-            }
-          } else {
-            logger.error("Error switching network:", switchError?.message || String(switchError));
-            alert(`Failed to switch to localhost network: ${switchError.message || 'Unknown error'}`);
-            setLoading(false);
-            return;
-          }
+          logger.error("Error switching network:", switchError?.message || String(switchError));
+          alert(`Please switch to Sepolia network in MetaMask`);
+          setLoading(false);
+          return;
         }
       }
 
