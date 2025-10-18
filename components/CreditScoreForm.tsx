@@ -32,25 +32,25 @@ export default function CreditScoreForm({ signer, account }: CreditScoreFormProp
         logger.info(`Loading wallet metrics for: ${account}`);
         setWalletAnalysisError(null);
 
-        const provider = signer.provider;
-        if (!provider) {
-          const error = "No provider available";
-          logger.warn(error);
-          setWalletAnalysisError(error);
-          // Use demo metrics instead of zeros
-          setWalletMetrics({
-            transactionCount: 50,
-            balance: "0.1",
-            walletAge: 90,
-            transactionCountScore: 35,
-            balanceScore: 10,
-            ageScore: 25,
-          });
-          setAnalyzingWallet(false);
-          return;
+        // Use a dedicated Sepolia RPC provider for wallet analysis
+        // This avoids issues with MetaMask's provider and ensures reliable data fetching
+        const network = await signer.provider?.getNetwork();
+        const chainId = Number(network?.chainId || 0);
+
+        let analysisProvider: ethers.Provider;
+        if (chainId === 11155111) {
+          // For Sepolia, use public RPC
+          analysisProvider = new ethers.JsonRpcProvider("https://ethereum-sepolia-rpc.publicnode.com");
+          logger.info("Using Sepolia public RPC for wallet analysis");
+        } else if (chainId === 31337) {
+          // For localhost, use the signer's provider
+          analysisProvider = signer.provider!;
+        } else {
+          // For other networks, try to use signer's provider
+          analysisProvider = signer.provider!;
         }
 
-        const metrics = await analyzeWallet(account, provider);
+        const metrics = await analyzeWallet(account, analysisProvider);
         setWalletMetrics(metrics);
         setWalletAnalysisError(null);
         logger.info({ metrics }, "Wallet metrics loaded");
