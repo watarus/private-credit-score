@@ -120,7 +120,26 @@ export async function encryptCreditInputs(
     const chainId = Number(network.chainId);
     logger.info({ chainId, name: network.name }, "Network detected");
 
-    // Always use FHE encryption (works on local with @fhevm/hardhat-plugin)
+    // For Sepolia (public testnet), use mock encryption since FHEVM is not available
+    if (chainId === 11155111) {
+      logger.warn("Sepolia detected - using mock encryption (demo only)");
+      logger.warn("⚠️  Note: This is for demonstration purposes. Real FHE encryption is not available on Sepolia.");
+
+      // Create dummy handles (just encode the values as bytes32)
+      const handles = values.map((value) => {
+        const hex = ethers.toBeHex(value, 32);
+        logger.info(`Mock encrypting value: ${value} -> ${hex}`);
+        return hex;
+      });
+
+      // Create a dummy proof
+      const inputProof = ethers.hexlify(new Uint8Array(32).fill(0));
+
+      logger.info("Mock encryption completed");
+      return { handles, inputProof };
+    }
+
+    // For localhost or other networks with FHEVM support, use real encryption
     logger.info("Initializing FHEVM instance for encryption...");
     const instance = await getFhevmInstance(provider);
 
