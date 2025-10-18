@@ -69,16 +69,25 @@ export async function initializeFhevm(
       networkUrl,
     };
 
-    // For Sepolia, set ACL address for fhevmjs to fetch public key
+    // For Sepolia, use Zama's coprocessor testnet configuration
     if (chainId === 11155111) {
-      config.aclAddress = "0x687820221192C5B662b25367F70076A37bc79b6c";
-      logger.info("Using Sepolia FHEVM configuration with ACL");
+      config.aclContractAddress = "0x687820221192C5B662b25367F70076A37bc79b6c";
+      config.kmsContractAddress = "0x1364cBBf2cDF5032C47d8226a6f6FBD2AFCDacAC";
+      config.relayerUrl = "https://relayer.testnet.zama.cloud";
+      config.gatewayUrl = "https://gateway.sepolia.zama.ai/";
+      logger.info("Using Sepolia FHEVM coprocessor configuration");
+      logger.info({
+        aclContractAddress: config.aclContractAddress,
+        kmsContractAddress: config.kmsContractAddress,
+        relayerUrl: config.relayerUrl,
+        gatewayUrl: config.gatewayUrl,
+      }, "Sepolia config");
     }
 
     // Add gateway URL if available (for production networks)
     if (process.env.NEXT_PUBLIC_GATEWAY_URL) {
       config.gatewayUrl = process.env.NEXT_PUBLIC_GATEWAY_URL;
-      logger.info(`Gateway URL configured: ${config.gatewayUrl}`);
+      logger.info(`Gateway URL configured (overridden): ${config.gatewayUrl}`);
     }
 
     logger.info({ config }, "Creating FHEVM instance with config");
@@ -126,7 +135,7 @@ export async function encryptCreditInputs(
     const chainId = Number(network.chainId);
     logger.info({ chainId, name: network.name }, "Network detected");
 
-    // Use real FHE encryption for all networks
+    // Use real FHE encryption for all supported networks
     logger.info("Initializing FHEVM instance for encryption...");
     const instance = await getFhevmInstance(provider);
 
