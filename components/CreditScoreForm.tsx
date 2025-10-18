@@ -25,8 +25,9 @@ export default function CreditScoreForm({ signer, account }: CreditScoreFormProp
     async function loadWalletMetrics() {
       if (!account || !signer) return;
 
+      setAnalyzingWallet(true);
+
       try {
-        setAnalyzingWallet(true);
         logger.info(`Loading wallet metrics for: ${account}`);
         const provider = signer.provider;
         if (!provider) {
@@ -40,6 +41,7 @@ export default function CreditScoreForm({ signer, account }: CreditScoreFormProp
             balanceScore: 0,
             ageScore: 0,
           });
+          setAnalyzingWallet(false);
           return;
         }
 
