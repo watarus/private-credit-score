@@ -69,6 +69,13 @@ export async function initializeFhevm(
       networkUrl,
     };
 
+    // For Sepolia, use Zama's public key
+    if (chainId === 11155111) {
+      config.publicKey = "0x8000000000000000000000000000000000000000000000000000000000000000";
+      config.kmsContractAddress = "0x1364cBBf2cDF5032C47d8226a6f6FBD2AFCDacAC";
+      logger.info("Using Sepolia FHEVM configuration");
+    }
+
     // Add gateway URL if available (for production networks)
     if (process.env.NEXT_PUBLIC_GATEWAY_URL) {
       config.gatewayUrl = process.env.NEXT_PUBLIC_GATEWAY_URL;
@@ -120,26 +127,7 @@ export async function encryptCreditInputs(
     const chainId = Number(network.chainId);
     logger.info({ chainId, name: network.name }, "Network detected");
 
-    // For Sepolia (public testnet), use mock encryption since FHEVM is not available
-    if (chainId === 11155111) {
-      logger.warn("Sepolia detected - using mock encryption (demo only)");
-      logger.warn("⚠️  Note: This is for demonstration purposes. Real FHE encryption is not available on Sepolia.");
-
-      // Create dummy handles (just encode the values as bytes32)
-      const handles = values.map((value) => {
-        const hex = ethers.toBeHex(value, 32);
-        logger.info(`Mock encrypting value: ${value} -> ${hex}`);
-        return hex;
-      });
-
-      // Create a dummy proof
-      const inputProof = ethers.hexlify(new Uint8Array(32).fill(0));
-
-      logger.info("Mock encryption completed");
-      return { handles, inputProof };
-    }
-
-    // For localhost or other networks with FHEVM support, use real encryption
+    // Use real FHE encryption for all networks
     logger.info("Initializing FHEVM instance for encryption...");
     const instance = await getFhevmInstance(provider);
 
