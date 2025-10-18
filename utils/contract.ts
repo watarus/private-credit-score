@@ -69,24 +69,10 @@ export async function initializeFhevm(
       networkUrl,
     };
 
-    // For Sepolia, fetch the public key from KMS Verifier contract
+    // For Sepolia, set ACL address for fhevmjs to fetch public key
     if (chainId === 11155111) {
-      const kmsVerifierAddress = "0x1364cBBf2cDF5032C47d8226a6f6FBD2AFCDacAC";
-      const kmsVerifier = new ethers.Contract(
-        kmsVerifierAddress,
-        ["function getPublicKey() view returns (bytes)"],
-        provider
-      );
-
-      try {
-        const publicKeyBytes = await kmsVerifier.getPublicKey();
-        config.publicKey = publicKeyBytes;
-        config.kmsContractAddress = kmsVerifierAddress;
-        logger.info(`Fetched Sepolia public key: ${publicKeyBytes.substring(0, 20)}...`);
-      } catch (error: any) {
-        logger.error(`Failed to fetch public key from KMS: ${error.message}`);
-        throw new Error("Could not fetch FHEVM public key from Sepolia KMS Verifier");
-      }
+      config.aclAddress = "0x687820221192C5B662b25367F70076A37bc79b6c";
+      logger.info("Using Sepolia FHEVM configuration with ACL");
     }
 
     // Add gateway URL if available (for production networks)
