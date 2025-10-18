@@ -80,10 +80,15 @@ export default function CreditScoreForm({ signer, account }: CreditScoreFormProp
       return;
     }
 
-    if (!walletMetrics) {
-      alert("Please wait for wallet analysis to complete");
-      return;
-    }
+    // Use wallet metrics if available, otherwise use defaults
+    const metricsToUse = walletMetrics || {
+      transactionCount: 0,
+      balance: "0",
+      walletAge: 0,
+      transactionCountScore: 0,
+      balanceScore: 0,
+      ageScore: 0,
+    };
 
     try {
       setLoading(true);
@@ -101,7 +106,7 @@ export default function CreditScoreForm({ signer, account }: CreditScoreFormProp
       const parsedHistory = parseInt(loanHistory, 10);
 
       logger.info({ parsedIncome, parsedRepayment, parsedHistory }, "Parsed credit values");
-      logger.info({ walletMetrics }, "Wallet metrics");
+      logger.info({ metricsToUse }, "Wallet metrics");
 
       // Import encryption functions
       const { encryptCreditInputs } = await import("@/utils/contract");
@@ -119,9 +124,9 @@ export default function CreditScoreForm({ signer, account }: CreditScoreFormProp
           parsedIncome,
           parsedRepayment,
           parsedHistory,
-          walletMetrics.transactionCountScore,
-          walletMetrics.balanceScore,
-          walletMetrics.ageScore,
+          metricsToUse.transactionCountScore,
+          metricsToUse.balanceScore,
+          metricsToUse.ageScore,
         ],
         account,
         contractAddress,
