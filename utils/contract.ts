@@ -69,27 +69,24 @@ export async function initializeFhevm(
       networkUrl,
     };
 
-    // For Sepolia, use Zama's coprocessor testnet configuration (2025)
+    // For Sepolia, use Zama's coprocessor testnet configuration
+    // fhevmjs 0.5.0 uses: chainId, networkUrl, coprocessorUrl, aclAddress
     if (chainId === 11155111) {
-      config.verifyingContractAddress = "0x7048C39f048125eDa9d678AEbaDfB22F7900a29F";
-      config.kmsContractAddress = "0x1364cBBf2cDF5032C47d8226a6f6FBD2AFCDacAC";
-      config.aclContractAddress = "0x687820221192C5B662b25367F70076A37bc79b6c";
-      config.relayerUrl = "https://relayer.testnet.zama.cloud";
-      config.gatewayChainId = 11155111;
-      logger.info("Using Sepolia FHEVM coprocessor configuration (2025)");
+      config.coprocessorUrl = "https://gateway.sepolia.zama.ai";
+      config.aclAddress = "0x687820221192C5B662b25367F70076A37bc79b6c";
+      logger.info("Using Sepolia FHEVM coprocessor configuration");
       logger.info({
-        verifyingContractAddress: config.verifyingContractAddress,
-        kmsContractAddress: config.kmsContractAddress,
-        aclContractAddress: config.aclContractAddress,
-        relayerUrl: config.relayerUrl,
-        gatewayChainId: config.gatewayChainId,
+        chainId: config.chainId,
+        networkUrl: config.networkUrl,
+        coprocessorUrl: config.coprocessorUrl,
+        aclAddress: config.aclAddress,
       }, "Sepolia config");
     }
 
-    // Add gateway URL if available (for production networks)
+    // Add coprocessor/gateway URL override if available
     if (process.env.NEXT_PUBLIC_GATEWAY_URL) {
-      config.gatewayUrl = process.env.NEXT_PUBLIC_GATEWAY_URL;
-      logger.info(`Gateway URL configured (overridden): ${config.gatewayUrl}`);
+      config.coprocessorUrl = process.env.NEXT_PUBLIC_GATEWAY_URL;
+      logger.info(`Coprocessor URL configured (overridden): ${config.coprocessorUrl}`);
     }
 
     logger.info({ config }, "Creating FHEVM instance with config");
