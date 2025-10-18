@@ -51,8 +51,17 @@ export async function initializeFhevm(
     const chainId = Number(network.chainId);
     logger.info(`Network chain ID: ${chainId}`);
 
-    // Get network URL from provider
-    const networkUrl = (provider as ethers.JsonRpcProvider)._getConnection?.()?.url || "http://localhost:8545";
+    // Use appropriate RPC URL based on chain ID
+    let networkUrl: string;
+    if (chainId === 11155111) {
+      // Sepolia - use public RPC
+      networkUrl = "https://ethereum-sepolia-rpc.publicnode.com";
+    } else if (chainId === 31337) {
+      // Localhost
+      networkUrl = "http://localhost:8545";
+    } else {
+      networkUrl = (provider as ethers.JsonRpcProvider)._getConnection?.()?.url || "http://localhost:8545";
+    }
     logger.info(`Network URL: ${networkUrl}`);
 
     const config: any = {
