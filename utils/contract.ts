@@ -69,11 +69,24 @@ export async function initializeFhevm(
       networkUrl,
     };
 
-    // For Sepolia, use Zama's public key
+    // For Sepolia, fetch the public key from KMS Verifier contract
     if (chainId === 11155111) {
-      config.publicKey = "0x8000000000000000000000000000000000000000000000000000000000000000";
-      config.kmsContractAddress = "0x1364cBBf2cDF5032C47d8226a6f6FBD2AFCDacAC";
-      logger.info("Using Sepolia FHEVM configuration");
+      const kmsVerifierAddress = "0x1364cBBf2cDF5032C47d8226a6f6FBD2AFCDacAC";
+      const kmsVerifier = new ethers.Contract(
+        kmsVerifierAddress,
+        ["function getPublicKey() view returns (bytes)"],
+        provider
+      );
+
+      try {
+        const publicKeyBytes = await kmsVerifier.getPublicKey();
+        config.publicKey = publicKeyBytes;
+        config.kmsContractAddress = kmsVerifierAddress;
+        logger.info(`Fetched Sepolia public key: ${publicKeyBytes.substring(0, 20)}...`);
+      } catch (error: any) {
+        logger.error(`Failed to fetch public key from KMS: ${error.message}`);
+        throw new Error("Could not fetch FHEVM public key from Sepolia KMS Verifier");
+      }
     }
 
     // Add gateway URL if available (for production networks)
