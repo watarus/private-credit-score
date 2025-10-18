@@ -19,6 +19,7 @@ export default function CreditScoreForm({ signer, account }: CreditScoreFormProp
   const [success, setSuccess] = useState(false);
   const [walletMetrics, setWalletMetrics] = useState<WalletMetrics | null>(null);
   const [analyzingWallet, setAnalyzingWallet] = useState(false);
+  const [walletAnalysisError, setWalletAnalysisError] = useState<string | null>(null);
 
   // Analyze wallet when account changes
   useEffect(() => {
@@ -29,17 +30,21 @@ export default function CreditScoreForm({ signer, account }: CreditScoreFormProp
 
       try {
         logger.info(`Loading wallet metrics for: ${account}`);
+        setWalletAnalysisError(null);
+
         const provider = signer.provider;
         if (!provider) {
-          logger.warn("No provider available");
-          // Set default metrics if no provider
+          const error = "No provider available";
+          logger.warn(error);
+          setWalletAnalysisError(error);
+          // Use demo metrics instead of zeros
           setWalletMetrics({
-            transactionCount: 0,
-            balance: "0",
-            walletAge: 0,
-            transactionCountScore: 0,
-            balanceScore: 0,
-            ageScore: 0,
+            transactionCount: 50,
+            balance: "0.1",
+            walletAge: 90,
+            transactionCountScore: 35,
+            balanceScore: 10,
+            ageScore: 25,
           });
           setAnalyzingWallet(false);
           return;
@@ -47,17 +52,21 @@ export default function CreditScoreForm({ signer, account }: CreditScoreFormProp
 
         const metrics = await analyzeWallet(account, provider);
         setWalletMetrics(metrics);
+        setWalletAnalysisError(null);
         logger.info({ metrics }, "Wallet metrics loaded");
       } catch (error: any) {
-        logger.error({ error: error?.message || String(error) }, "Failed to load wallet metrics");
-        // Set default metrics on error
+        const errorMsg = error?.message || String(error);
+        logger.error({ error: errorMsg }, "Failed to load wallet metrics");
+        setWalletAnalysisError(errorMsg);
+
+        // Use demo metrics instead of zeros to allow testing
         setWalletMetrics({
-          transactionCount: 0,
-          balance: "0",
-          walletAge: 0,
-          transactionCountScore: 0,
-          balanceScore: 0,
-          ageScore: 0,
+          transactionCount: 50,
+          balance: "0.1",
+          walletAge: 90,
+          transactionCountScore: 35,
+          balanceScore: 10,
+          ageScore: 25,
         });
       } finally {
         setAnalyzingWallet(false);
@@ -194,7 +203,12 @@ export default function CreditScoreForm({ signer, account }: CreditScoreFormProp
 
       {walletMetrics && !analyzingWallet && (
         <div className="mb-6 bg-white/5 border border-white/20 rounded-lg p-4">
-          <h3 className="text-white font-semibold mb-3">📊 Your Wallet Metrics (Auto-detected)</h3>
+          <h3 className="text-white font-semibold mb-3">📊 Your Wallet Metrics {walletAnalysisError && "(Demo Data)"}</h3>
+          {walletAnalysisError && (
+            <div className="mb-3 bg-yellow-500/20 border border-yellow-500/50 rounded p-2">
+              <p className="text-xs text-yellow-200">⚠️ Could not fetch real data: {walletAnalysisError}. Using demo values for testing.</p>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div>
               <p className="text-white/60">Transactions</p>
@@ -214,7 +228,7 @@ export default function CreditScoreForm({ signer, account }: CreditScoreFormProp
             </div>
           </div>
           <p className="text-xs text-white/60 mt-3">
-            ✨ These metrics are automatically calculated from your wallet's on-chain history and will be included (encrypted) in your credit evaluation.
+            ✨ These metrics are {walletAnalysisError ? "demo values that will be" : "automatically calculated from your wallet's on-chain history and will be"} included (encrypted) in your credit evaluation.
           </p>
         </div>
       )}
