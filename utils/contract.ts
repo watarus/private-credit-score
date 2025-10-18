@@ -69,18 +69,20 @@ export async function initializeFhevm(
       networkUrl,
     };
 
-    // For Sepolia, use Zama's coprocessor testnet configuration
+    // For Sepolia, use Zama's coprocessor testnet configuration (2025)
     if (chainId === 11155111) {
-      config.aclContractAddress = "0x687820221192C5B662b25367F70076A37bc79b6c";
+      config.verifyingContractAddress = "0x7048C39f048125eDa9d678AEbaDfB22F7900a29F";
       config.kmsContractAddress = "0x1364cBBf2cDF5032C47d8226a6f6FBD2AFCDacAC";
+      config.aclContractAddress = "0x687820221192C5B662b25367F70076A37bc79b6c";
       config.relayerUrl = "https://relayer.testnet.zama.cloud";
-      config.gatewayUrl = "https://gateway.sepolia.zama.ai/";
-      logger.info("Using Sepolia FHEVM coprocessor configuration");
+      config.gatewayChainId = 11155111;
+      logger.info("Using Sepolia FHEVM coprocessor configuration (2025)");
       logger.info({
-        aclContractAddress: config.aclContractAddress,
+        verifyingContractAddress: config.verifyingContractAddress,
         kmsContractAddress: config.kmsContractAddress,
+        aclContractAddress: config.aclContractAddress,
         relayerUrl: config.relayerUrl,
-        gatewayUrl: config.gatewayUrl,
+        gatewayChainId: config.gatewayChainId,
       }, "Sepolia config");
     }
 
