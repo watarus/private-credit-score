@@ -23,6 +23,13 @@ const CONTRACT_ADDRESS =
 // FHEVM instance cache
 let fhevmInstance: FhevmInstance | null = null;
 
+type FhevmRuntimeConfig = {
+  chainId: number;
+  coprocessorUrl?: string;
+};
+
+let fhevmRuntimeConfig: FhevmRuntimeConfig | null = null;
+
 export function getContractInstance(
   signerOrProvider: ethers.Signer | ethers.Provider
 ) {
@@ -39,10 +46,6 @@ export function getContractAddress() {
 export async function initializeFhevm(
   provider: ethers.Provider
 ): Promise<FhevmInstance> {
-  if (fhevmInstance) {
-    return fhevmInstance;
-  }
-
   try {
     logger.info("Initializing FHEVM...");
     await initFhevm();
@@ -90,6 +93,11 @@ export async function initializeFhevm(
     }
 
     logger.info({ config }, "Creating FHEVM instance with config");
+    fhevmRuntimeConfig = {
+      chainId,
+      coprocessorUrl: config.coprocessorUrl,
+    };
+
     fhevmInstance = await createInstance(config);
     logger.info("FHEVM instance created successfully");
 
@@ -107,6 +115,23 @@ export async function initializeFhevm(
 export async function getFhevmInstance(
   provider: ethers.Provider
 ): Promise<FhevmInstance> {
+  const network = await provider.getNetwork();
+  const chainId = Number(network.chainId);
+
+  if (
+    fhevmRuntimeConfig &&
+    fhevmRuntimeConfig.chainId !== chainId
+  ) {
+    logger.info(
+      {
+        previousChainId: fhevmRuntimeConfig.chainId,
+        newChainId: chainId,
+      },
+      "Chain changed. Reinitializing FHEVM instance"
+    );
+    fhevmInstance = null;
+  }
+
   if (!fhevmInstance) {
     return initializeFhevm(provider);
   }
@@ -150,8 +175,19 @@ export async function encryptCreditInputs(
       encryptedInput.add32(value);
     });
 
-    logger.info("Encrypting inputs...");
-    const { handles, inputProof } = encryptedInput.encrypt();
+    const useCoprocessor = Boolean(fhevmRuntimeConfig?.coprocessorUrl);
+    logger.info(
+      {
+        useCoprocessor,
+        chainId: fhevmRuntimeConfig?.chainId,
+        coprocessorUrl: fhevmRuntimeConfig?.coprocessorUrl,
+      },
+      "Encrypting inputs..."
+    );
+
+    const { handles, inputProof } = useCoprocessor
+      ? await encryptedInput.send()
+      : encryptedInput.encrypt();
 
     logger.info("Encryption completed successfully");
     logger.info(`Handles: ${handles.length}`);
