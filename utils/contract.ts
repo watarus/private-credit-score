@@ -20,6 +20,8 @@ const CONTRACT_ADDRESS =
   process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ??
   "0x0000000000000000000000000000000000000000";
 
+const DEFAULT_SEPOLIA_GATEWAY = "https://gateway.sepolia.zama.ai";
+
 // FHEVM instance cache
 let fhevmInstance: FhevmInstance | null = null;
 
@@ -29,6 +31,33 @@ type FhevmRuntimeConfig = {
 };
 
 let fhevmRuntimeConfig: FhevmRuntimeConfig | null = null;
+
+const resolveCoprocessorUrl = (chainId: number): string | undefined => {
+  let configuredGateway =
+    process.env.NEXT_PUBLIC_GATEWAY_URL ?? DEFAULT_SEPOLIA_GATEWAY;
+
+  if (chainId === 11155111) {
+    // Force default Sepolia gateway if env not provided
+    configuredGateway = process.env.NEXT_PUBLIC_GATEWAY_URL ?? DEFAULT_SEPOLIA_GATEWAY;
+  }
+
+  if (typeof window !== "undefined") {
+    try {
+      const gatewayOrigin = new URL(configuredGateway).origin;
+      if (gatewayOrigin !== window.location.origin) {
+        return `${window.location.origin}/api/fhevm`;
+      }
+    } catch (error) {
+      logger.warn(
+        { configuredGateway, error: (error as Error).message },
+        "Invalid gateway URL configured; falling back to default"
+      );
+      configuredGateway = DEFAULT_SEPOLIA_GATEWAY;
+    }
+  }
+
+  return configuredGateway;
+};
 
 export function getContractInstance(
   signerOrProvider: ethers.Signer | ethers.Provider
@@ -75,7 +104,7 @@ export async function initializeFhevm(
     // For Sepolia, use Zama's coprocessor testnet configuration
     // fhevmjs 0.5.0 uses: chainId, networkUrl, coprocessorUrl, aclAddress
     if (chainId === 11155111) {
-      config.coprocessorUrl = "https://gateway.sepolia.zama.ai";
+      config.coprocessorUrl = resolveCoprocessorUrl(chainId);
       config.aclAddress = "0x687820221192C5B662b25367F70076A37bc79b6c";
       logger.info("Using Sepolia FHEVM coprocessor configuration");
       logger.info({
@@ -86,11 +115,7 @@ export async function initializeFhevm(
       }, "Sepolia config");
     }
 
-    // Add coprocessor/gateway URL override if available
-    if (process.env.NEXT_PUBLIC_GATEWAY_URL) {
-      config.coprocessorUrl = process.env.NEXT_PUBLIC_GATEWAY_URL;
-      logger.info(`Coprocessor URL configured (overridden): ${config.coprocessorUrl}`);
-    }
+    logger.info(`Effective coprocessor URL: ${config.coprocessorUrl ?? "none"}`);
 
     logger.info({ config }, "Creating FHEVM instance with config");
     fhevmRuntimeConfig = {
