@@ -1,5 +1,5 @@
 import { ethers } from "ethers";
-import { initFhevm, createInstance, FhevmInstance } from "fhevmjs";
+import { initSDK, createInstance, SepoliaConfig, type FhevmInstance } from "@zama-fhe/relayer-sdk/web";
 import { logger } from "./logger";
 
 // Contract ABI (minimal version for demo)
@@ -20,44 +20,14 @@ const CONTRACT_ADDRESS =
   process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ??
   "0x0000000000000000000000000000000000000000";
 
-const DEFAULT_SEPOLIA_GATEWAY = "https://gateway.sepolia.zama.ai";
-
 // FHEVM instance cache
 let fhevmInstance: FhevmInstance | null = null;
 
 type FhevmRuntimeConfig = {
   chainId: number;
-  coprocessorUrl?: string;
 };
 
 let fhevmRuntimeConfig: FhevmRuntimeConfig | null = null;
-
-const resolveCoprocessorUrl = (chainId: number): string | undefined => {
-  let configuredGateway =
-    process.env.NEXT_PUBLIC_GATEWAY_URL ?? DEFAULT_SEPOLIA_GATEWAY;
-
-  if (chainId === 11155111) {
-    // Force default Sepolia gateway if env not provided
-    configuredGateway = process.env.NEXT_PUBLIC_GATEWAY_URL ?? DEFAULT_SEPOLIA_GATEWAY;
-  }
-
-  if (typeof window !== "undefined") {
-    try {
-      const gatewayOrigin = new URL(configuredGateway).origin;
-      if (gatewayOrigin !== window.location.origin) {
-        return `${window.location.origin}/api/fhevm`;
-      }
-    } catch (error) {
-      logger.warn(
-        { configuredGateway, error: (error as Error).message },
-        "Invalid gateway URL configured; falling back to default"
-      );
-      configuredGateway = DEFAULT_SEPOLIA_GATEWAY;
-    }
-  }
-
-  return configuredGateway;
-};
 
 export function getContractInstance(
   signerOrProvider: ethers.Signer | ethers.Provider
@@ -76,55 +46,29 @@ export async function initializeFhevm(
   provider: ethers.Provider
 ): Promise<FhevmInstance> {
   try {
-    logger.info("Initializing FHEVM...");
-    await initFhevm();
+    logger.info("Initializing FHEVM SDK...");
+    await initSDK();
 
     const network = await provider.getNetwork();
     const chainId = Number(network.chainId);
     logger.info(`Network chain ID: ${chainId}`);
 
-    // Use appropriate RPC URL based on chain ID
-    let networkUrl: string;
     if (chainId === 11155111) {
-      // Sepolia - use public RPC
-      networkUrl = "https://ethereum-sepolia-rpc.publicnode.com";
-    } else if (chainId === 31337) {
-      // Localhost
-      networkUrl = "http://localhost:8545";
+      // Sepolia - use built-in SepoliaConfig
+      logger.info("Using Sepolia FHEVM configuration");
+      logger.info({ SepoliaConfig }, "Sepolia config");
+
+      fhevmRuntimeConfig = {
+        chainId,
+      };
+
+      // SepoliaConfig has all the required contract addresses pre-configured
+      fhevmInstance = await createInstance(SepoliaConfig);
+      logger.info("FHEVM instance created successfully with SepoliaConfig");
     } else {
-      networkUrl = (provider as ethers.JsonRpcProvider)._getConnection?.()?.url || "http://localhost:8545";
+      // For other networks, manual configuration required
+      throw new Error(`Unsupported network chainId: ${chainId}. Only Sepolia (11155111) is currently supported.`);
     }
-    logger.info(`Network URL: ${networkUrl}`);
-
-    const config: any = {
-      chainId,
-      networkUrl,
-    };
-
-    // For Sepolia, use Zama's coprocessor testnet configuration
-    // fhevmjs 0.5.0 uses: chainId, networkUrl, coprocessorUrl, aclAddress
-    if (chainId === 11155111) {
-      config.coprocessorUrl = resolveCoprocessorUrl(chainId);
-      config.aclAddress = "0x687820221192C5B662b25367F70076A37bc79b6c";
-      logger.info("Using Sepolia FHEVM coprocessor configuration");
-      logger.info({
-        chainId: config.chainId,
-        networkUrl: config.networkUrl,
-        coprocessorUrl: config.coprocessorUrl,
-        aclAddress: config.aclAddress,
-      }, "Sepolia config");
-    }
-
-    logger.info(`Effective coprocessor URL: ${config.coprocessorUrl ?? "none"}`);
-
-    logger.info({ config }, "Creating FHEVM instance with config");
-    fhevmRuntimeConfig = {
-      chainId,
-      coprocessorUrl: config.coprocessorUrl,
-    };
-
-    fhevmInstance = await createInstance(config);
-    logger.info("FHEVM instance created successfully");
 
     return fhevmInstance;
   } catch (error: any) {
@@ -200,26 +144,22 @@ export async function encryptCreditInputs(
       encryptedInput.add32(value);
     });
 
-    const useCoprocessor = Boolean(fhevmRuntimeConfig?.coprocessorUrl);
     logger.info(
       {
-        useCoprocessor,
         chainId: fhevmRuntimeConfig?.chainId,
-        coprocessorUrl: fhevmRuntimeConfig?.coprocessorUrl,
       },
-      "Encrypting inputs..."
+      "Encrypting inputs with new SDK..."
     );
 
-    const { handles, inputProof } = useCoprocessor
-      ? await encryptedInput.send()
-      : encryptedInput.encrypt();
+    // New SDK: encrypt() returns Promise
+    const { handles, inputProof } = await encryptedInput.encrypt();
 
     logger.info("Encryption completed successfully");
     logger.info(`Handles: ${handles.length}`);
     logger.info(`InputProof length: ${inputProof.length}`);
 
     return {
-      handles: handles.map((handle) => ethers.hexlify(handle)),
+      handles: handles.map((handle: Uint8Array) => ethers.hexlify(handle)),
       inputProof: ethers.hexlify(inputProof),
     };
   } catch (error: any) {
