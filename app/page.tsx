@@ -7,6 +7,9 @@ import StatusCard from "@/components/StatusCard";
 import Header from "@/components/Header";
 import { logger } from "@/utils/logger";
 
+// Force dynamic rendering to avoid SSR issues with browser-only SDK
+export const dynamic = 'force-dynamic';
+
 export default function Home() {
   const [account, setAccount] = useState<string | null>(null);
   const [provider, setProvider] = useState<ethers.BrowserProvider | null>(null);

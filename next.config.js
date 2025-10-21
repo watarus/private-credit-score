@@ -10,9 +10,14 @@ const nextConfig = {
     esmExternals: 'loose',
   },
   webpack: (config, { isServer }) => {
-    // Exclude @zama-fhe/relayer-sdk from server-side rendering
+    // Exclude @zama-fhe/relayer-sdk and related packages from server-side rendering
     if (isServer) {
-      config.externals.push('@zama-fhe/relayer-sdk');
+      config.externals.push({
+        '@zama-fhe/relayer-sdk': 'commonjs @zama-fhe/relayer-sdk',
+        '@zama-fhe/relayer-sdk/web': 'commonjs @zama-fhe/relayer-sdk/web',
+        'tfhe': 'commonjs tfhe',
+        'tkms': 'commonjs tkms',
+      });
     }
     config.resolve.fallback = {
       ...config.resolve.fallback,
