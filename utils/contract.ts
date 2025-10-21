@@ -54,16 +54,22 @@ export async function initializeFhevm(
     logger.info(`Network chain ID: ${chainId}`);
 
     if (chainId === 11155111) {
-      // Sepolia - use built-in SepoliaConfig
+      // Sepolia - use built-in SepoliaConfig with provider
       logger.info("Using Sepolia FHEVM configuration");
-      logger.info({ SepoliaConfig }, "Sepolia config");
 
       fhevmRuntimeConfig = {
         chainId,
       };
 
       // SepoliaConfig has all the required contract addresses pre-configured
-      fhevmInstance = await createInstance(SepoliaConfig);
+      // Pass the provider for network access
+      const config = {
+        ...SepoliaConfig,
+        network: provider as any, // Use MetaMask provider for network access
+      };
+
+      logger.info({ config }, "Creating instance with config");
+      fhevmInstance = await createInstance(config);
       logger.info("FHEVM instance created successfully with SepoliaConfig");
     } else {
       // For other networks, manual configuration required
