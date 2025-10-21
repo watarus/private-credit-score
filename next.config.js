@@ -6,7 +6,14 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  webpack: (config) => {
+  experimental: {
+    esmExternals: 'loose',
+  },
+  webpack: (config, { isServer }) => {
+    // Exclude @zama-fhe/relayer-sdk from server-side rendering
+    if (isServer) {
+      config.externals.push('@zama-fhe/relayer-sdk');
+    }
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,
