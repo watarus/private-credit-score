@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { ethers } from "ethers";
-import { getContractInstance } from "@/utils/contract";
 import { logger } from "@/utils/logger";
 import { analyzeWallet, WalletMetrics } from "@/utils/walletAnalyzer";
 
@@ -98,7 +97,6 @@ export default function CreditScoreForm({ signer, account }: CreditScoreFormProp
       setLoading(true);
       setSuccess(false);
 
-      const contract = getContractInstance(signer);
       const provider = signer.provider;
 
       if (!provider) {
@@ -112,8 +110,9 @@ export default function CreditScoreForm({ signer, account }: CreditScoreFormProp
       logger.info({ parsedIncome, parsedRepayment, parsedHistory }, "Parsed credit values");
       logger.info({ walletMetrics }, "Wallet metrics");
 
-      // Import encryption functions
-      const { encryptCreditInputs } = await import("@/utils/contract");
+      // Dynamically import contract utilities to avoid SSR issues
+      const { getContractInstance, encryptCreditInputs } = await import("@/utils/contract");
+      const contract = getContractInstance(signer);
       const contractAddress = await contract.getAddress();
 
       logger.info(`Contract address: ${contractAddress}`);

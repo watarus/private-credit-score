@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { ethers } from "ethers";
-import { getContractInstance } from "@/utils/contract";
 
 interface StatusCardProps {
   signer: ethers.Signer | null;
@@ -18,6 +17,8 @@ export default function StatusCard({ signer, account }: StatusCardProps) {
     if (!signer) return;
 
     try {
+      // Dynamically import to avoid SSR issues
+      const { getContractInstance } = await import("@/utils/contract");
       const contract = getContractInstance(signer);
       
       // Check if user has submitted credit data
@@ -44,6 +45,8 @@ export default function StatusCard({ signer, account }: StatusCardProps) {
 
     try {
       setEvaluating(true);
+      // Dynamically import to avoid SSR issues
+      const { getContractInstance } = await import("@/utils/contract");
       const contract = getContractInstance(signer);
       
       const tx = await contract.evaluateLoan();
