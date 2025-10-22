@@ -1,4 +1,5 @@
 const path = require("path");
+const webpack = require("webpack");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -18,6 +19,14 @@ const nextConfig = {
         'tfhe': 'commonjs tfhe',
         'tkms': 'commonjs tkms',
       });
+    } else {
+      // For client-side, provide polyfills for Node.js globals
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        global: false,
+        process: false,
+        buffer: false,
+      };
     }
     config.resolve.fallback = {
       ...config.resolve.fallback,
@@ -45,6 +54,13 @@ const nextConfig = {
         filename: "static/chunks/[name].[hash][ext]",
       },
     });
+
+    // Add ProvidePlugin to provide global for browser environment
+    config.plugins.push(
+      new webpack.ProvidePlugin({
+        global: 'global/window',
+      })
+    );
 
     return config;
   },
