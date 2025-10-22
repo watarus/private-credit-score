@@ -20,16 +20,28 @@ export default function StatusCard({ signer, account }: StatusCardProps) {
       // Dynamically import to avoid SSR issues
       const { getContractInstance } = await import("@/utils/contract");
       const contract = getContractInstance(signer);
-      
+
       // Check if user has submitted credit data
       const hasData = await contract.hasCreditData();
       setHasCreditData(hasData);
 
-      // Check loan approval status
-      const status = await contract.getLoanStatus();
-      setLoanStatus(status);
+      // Only check loan status if user has submitted credit data
+      if (hasData) {
+        try {
+          const status = await contract.getLoanStatus();
+          setLoanStatus(status);
+        } catch (error) {
+          // If getLoanStatus fails, it means the loan hasn't been evaluated yet
+          console.log("Loan not yet evaluated");
+          setLoanStatus(null);
+        }
+      } else {
+        setLoanStatus(null);
+      }
     } catch (error) {
       console.error("Error checking status:", error);
+      setHasCreditData(false);
+      setLoanStatus(null);
     }
   };
 
