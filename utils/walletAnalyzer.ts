@@ -69,11 +69,6 @@ async function estimateWalletAge(
   provider: ethers.Provider
 ): Promise<number> {
   try {
-    // Get current block
-    const currentBlock = await provider.getBlockNumber();
-    const currentBlockData = await provider.getBlock(currentBlock);
-    const currentTimestamp = currentBlockData!.timestamp;
-
     // Try to find an old transaction
     // This is a simplified approach - in production, you'd use an indexer
     const txCount = await provider.getTransactionCount(address);

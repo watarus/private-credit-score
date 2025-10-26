@@ -21,6 +21,22 @@ export default function StatusCard({ signer, account }: StatusCardProps) {
       const { getContractInstance } = await import("@/utils/contract");
       const contract = getContractInstance(signer);
 
+      // Verify contract has code deployed
+      const provider = signer.provider;
+      if (!provider) {
+        throw new Error("Provider not available");
+      }
+
+      const contractAddress = await contract.getAddress();
+      const code = await provider.getCode(contractAddress);
+
+      if (code === "0x" || code === "0x0") {
+        console.error(`Contract not deployed at ${contractAddress}`);
+        throw new Error("Contract not deployed on this network");
+      }
+
+      console.log(`Contract verified at ${contractAddress}`);
+
       // Check if user has submitted credit data
       const hasData = await contract.hasCreditData();
       setHasCreditData(hasData);
@@ -38,8 +54,16 @@ export default function StatusCard({ signer, account }: StatusCardProps) {
       } else {
         setLoanStatus(null);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error checking status:", error);
+
+      // Provide more specific error message
+      if (error.message?.includes("Contract not deployed")) {
+        console.error("⚠️ The smart contract is not deployed on the connected network. Please check your network connection and contract address.");
+      } else if (error.code === "CALL_EXCEPTION") {
+        console.error("⚠️ Contract call failed. The contract may not be properly deployed or the ABI may be incorrect.");
+      }
+
       setHasCreditData(false);
       setLoanStatus(null);
     }

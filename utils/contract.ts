@@ -54,23 +54,28 @@ export async function initializeFhevm(
     logger.info(`Network chain ID: ${chainId}`);
 
     if (chainId === 11155111) {
-      // Sepolia - use built-in SepoliaConfig with provider
+      // Sepolia - use built-in SepoliaConfig
       logger.info("Using Sepolia FHEVM configuration");
 
       fhevmRuntimeConfig = {
         chainId,
       };
 
-      // SepoliaConfig has all the required contract addresses pre-configured
-      // Pass the provider for network access
+      // Use window.ethereum directly for FHEVM SDK
+      if (typeof window === "undefined" || !window.ethereum) {
+        throw new Error("MetaMask or compatible wallet not found");
+      }
+
+      // Use SepoliaConfig preset with window.ethereum as network provider
       const config = {
         ...SepoliaConfig,
-        network: provider as any, // Use MetaMask provider for network access
+        network: window.ethereum,
       };
 
-      logger.info({ config }, "Creating instance with config");
+      logger.info("Creating FHEVM instance for Sepolia with SepoliaConfig");
+      logger.info({ config }, "Config details");
       fhevmInstance = await createInstance(config);
-      logger.info("FHEVM instance created successfully with SepoliaConfig");
+      logger.info("FHEVM instance created successfully");
     } else {
       // For other networks, manual configuration required
       throw new Error(`Unsupported network chainId: ${chainId}. Only Sepolia (11155111) is currently supported.`);

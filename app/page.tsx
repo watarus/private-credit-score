@@ -20,10 +20,22 @@ export default function Home() {
     const initProvider = async () => {
       if (typeof window !== "undefined" && window.ethereum) {
         try {
-          // Wait a bit for extensions to fully load
-          await new Promise(resolve => setTimeout(resolve, 100));
-          const web3Provider = new ethers.BrowserProvider(window.ethereum as any);
-          setProvider(web3Provider);
+          // Wait for MetaMask to be fully initialized
+          // MetaMask emits 'ethereum#initialized' event when ready
+          if (window.ethereum.isMetaMask) {
+            // If already initialized, create provider immediately
+            const web3Provider = new ethers.BrowserProvider(window.ethereum as any);
+            setProvider(web3Provider);
+          } else {
+            // Wait for initialization
+            await new Promise(resolve => setTimeout(resolve, 500));
+            if (window.ethereum && typeof window.ethereum.request === 'function') {
+              const web3Provider = new ethers.BrowserProvider(window.ethereum as any);
+              setProvider(web3Provider);
+            } else {
+              logger.warn("window.ethereum exists but is not a valid provider");
+            }
+          }
         } catch (error: any) {
           logger.error("Error initializing provider:", error?.message || error);
         }
@@ -48,17 +60,85 @@ export default function Home() {
 
       // If not on expected network, switch to it
       if (network.chainId !== BigInt(expectedChainId)) {
+        logger.info(`Current network: ${network.chainId}, expected: ${expectedChainId}`);
         try {
           // Try to switch to the expected network
+          logger.info("Attempting to switch network...");
           await provider.send("wallet_switchEthereumChain", [
             { chainId: targetChainId },
           ]);
+          logger.info("Network switched successfully");
         } catch (switchError: any) {
-          logger.error("Error switching network:", switchError?.message || String(switchError));
-          alert(`Please switch to Sepolia network in MetaMask`);
-          setLoading(false);
-          return;
+          logger.error({
+            code: switchError.code,
+            message: switchError.message,
+            data: switchError.data,
+            errorCode: switchError.error?.code,
+            errorData: switchError.error?.data,
+            originalErrorCode: switchError.error?.data?.originalError?.code
+          }, "Switch error");
+
+          // Check for error code 4902 (chain not added)
+          // It can be nested in different ways depending on the wallet
+          const errorCode =
+            switchError.code ||
+            switchError.error?.code ||
+            switchError.data?.originalError?.code ||
+            switchError.error?.data?.originalError?.code;
+
+          const originalErrorCode =
+            switchError.data?.originalError?.code ||
+            switchError.error?.data?.originalError?.code;
+
+          const is4902 = errorCode === 4902 || originalErrorCode === 4902;
+
+          logger.info({ errorCode, originalErrorCode, is4902 }, "Error code check");
+
+          if (is4902) {
+            logger.info("Network not found, attempting to add...");
+            try {
+              await provider.send("wallet_addEthereumChain", [
+                {
+                  chainId: targetChainId,
+                  chainName: "Sepolia Testnet",
+                  nativeCurrency: {
+                    name: "Sepolia ETH",
+                    symbol: "ETH",
+                    decimals: 18,
+                  },
+                  rpcUrls: ["https://eth-sepolia.public.blastapi.io"],
+                  blockExplorerUrls: ["https://sepolia.etherscan.io"],
+                },
+              ]);
+              logger.info("Network added successfully");
+              // Network is automatically switched after adding
+            } catch (addError: any) {
+              logger.error({ error: addError?.message || String(addError) }, "Error adding network");
+              if (addError.code === 4001) {
+                // User rejected the request
+                alert(`You need to add Sepolia network to use this app.`);
+              } else {
+                alert(`Failed to add Sepolia network to MetaMask. Please add it manually.`);
+              }
+              setLoading(false);
+              return;
+            }
+          } else if (errorCode === 4001 || switchError.data?.originalError?.code === 4001) {
+            // User rejected the request
+            logger.info("User rejected network switch");
+            alert(`Please accept the network switch to Sepolia to continue.`);
+            setLoading(false);
+            return;
+          } else {
+            logger.error({ error: switchError }, "Unknown error switching network");
+            alert(`Please switch to Sepolia network in MetaMask manually.`);
+            setLoading(false);
+            return;
+          }
         }
+
+        // Wait a bit for the network switch to complete
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
 
       // Reinitialize provider after network switch

@@ -1,7 +1,7 @@
 {
-  "contractAddress": "0xD5BE7c1924Ec55ad66445bC8d76e99522069bD5B",
+  "contractAddress": "0xa57722b5e5cA2AC8AbF58fc6ef7f1CC5962346db",
   "network": "sepolia",
   "chainId": 11155111,
   "minScoreThreshold": 650,
-  "deployedAt": "2025-10-13T21:47:02.584Z"
+  "deployedAt": "2025-10-26T14:35:25.298Z"
 }

@@ -49,7 +49,16 @@ export default function CreditScoreForm({ signer, account }: CreditScoreFormProp
           analysisProvider = signer.provider!;
         }
 
-        const metrics = await analyzeWallet(account, analysisProvider);
+        // Add timeout to wallet analysis
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error("Wallet analysis timeout")), 10000);
+        });
+
+        const metrics = await Promise.race([
+          analyzeWallet(account, analysisProvider),
+          timeoutPromise
+        ]);
+
         setWalletMetrics(metrics);
         setWalletAnalysisError(null);
         logger.info({ metrics }, "Wallet metrics loaded");
