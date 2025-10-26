@@ -106,7 +106,7 @@ export default function Home() {
                     symbol: "ETH",
                     decimals: 18,
                   },
-                  rpcUrls: ["https://eth-sepolia.public.blastapi.io"],
+                  rpcUrls: ["https://sepolia.drpc.org"],
                   blockExplorerUrls: ["https://sepolia.etherscan.io"],
                 },
               ]);
