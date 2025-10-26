@@ -1,6 +1,8 @@
 import { ethers } from "ethers";
-import { initSDK, createInstance, SepoliaConfig, type FhevmInstance } from "@zama-fhe/relayer-sdk/web";
 import { logger } from "./logger";
+
+// Type-only imports to avoid SSR issues
+import type { FhevmInstance } from "@zama-fhe/relayer-sdk/web";
 
 // Contract ABI (minimal version for demo)
 // Note: externalEuint32 is an alias for bytes32 in the ABI
@@ -47,6 +49,10 @@ export async function initializeFhevm(
 ): Promise<FhevmInstance> {
   try {
     logger.info("Initializing FHEVM SDK...");
+
+    // Dynamic import to avoid SSR issues
+    const { initSDK, createInstance, SepoliaConfig } = await import("@zama-fhe/relayer-sdk/web");
+
     await initSDK();
 
     const network = await provider.getNetwork();
