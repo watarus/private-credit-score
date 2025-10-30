@@ -1,0 +1,20 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build outputs
+.next
+out
+dist
+build
+
+# Hardhat
+cache
+artifacts
+typechain-types
+
+# Misc
+.env
+.env.local
+pnpm-lock.yaml
+package-lock.json
