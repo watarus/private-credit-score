@@ -173,7 +173,7 @@ For decrypting comparison results in production:
 ### Prerequisites
 
 - Node.js 18+
-- pnpm 8.15.0+
+- pnpm 10.20.0+
 - MetaMask or compatible Web3 wallet
 - Sepolia testnet ETH (get from [Sepolia faucet](https://sepoliafaucet.com/))
 
@@ -185,7 +185,7 @@ git clone https://github.com/watarus/private-credit-score.git
 cd private-credit-score
 
 # Install pnpm (if not already installed)
-npm install -g pnpm@8.15.0
+npm install -g pnpm@10.20.0
 
 # Install dependencies
 pnpm install
