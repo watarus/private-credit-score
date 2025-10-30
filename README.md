@@ -4,9 +4,12 @@
 
 Prove your creditworthiness without revealing your financial history. Built with Zama's Fully Homomorphic Encryption Virtual Machine (FHEVM) for complete privacy and transparent lending logic.
 
+🔗 **Live Demo**: [https://private-credit-score.vercel.app](https://private-credit-score.vercel.app)
+
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Solidity](https://img.shields.io/badge/Solidity-0.8.24-orange.svg)
 ![Next.js](https://img.shields.io/badge/Next.js-14.1.0-black.svg)
+![Network](https://img.shields.io/badge/Network-Sepolia-purple.svg)
 
 ## 🌟 Overview
 
@@ -32,10 +35,10 @@ With Private Credit Score:
 
 ```
 ┌─────────────────┐
-│   Frontend      │  Next.js + fhevmjs
-│   (React/TS)    │  - Encrypt user inputs
-└────────┬────────┘  - Submit to blockchain
-         │
+│   Frontend      │  Next.js 14 + @zama-fhe/relayer-sdk
+│   (React/TS)    │  - Encrypt user inputs with FHE
+└────────┬────────┘  - Auto wallet analysis
+         │           - Submit to blockchain
          ▼
 ┌─────────────────┐
 │   Smart         │  Solidity + TFHE
@@ -45,9 +48,11 @@ With Private Credit Score:
          │
          ▼
 ┌─────────────────┐
-│   Blockchain    │  Zama Devnet
+│   Blockchain    │  Sepolia Testnet (11155111)
 │   (Encrypted)   │  - Store encrypted state
 └─────────────────┘  - Maintain privacy
+
+Contract: 0xa57722b5e5cA2AC8AbF58fc6ef7f1CC5962346db
 ```
 
 ## 🔐 How It Works
@@ -92,9 +97,10 @@ With Private Credit Score:
 Our implementation uses **real Fully Homomorphic Encryption**, not mocks or simulations:
 
 #### Client-Side Encryption
-- All credit data (income, repayment rate, loan history) is encrypted using `fhevmjs` before submission
-- Encryption happens in the browser using the FHEVM instance
-- Uses `@fhevm/hardhat-plugin` for local development with actual FHE operations
+- All credit data (income, repayment rate, loan history, wallet metrics) is encrypted using `@zama-fhe/relayer-sdk` before submission
+- Encryption happens in the browser using the FHEVM instance with SepoliaConfig
+- Dynamic imports prevent SSR issues in Next.js production builds
+- Wallet analysis automatically fetches on-chain metrics (transaction count, balance, age)
 
 #### Smart Contract Operations
 ```solidity
@@ -167,8 +173,9 @@ For decrypting comparison results in production:
 ### Prerequisites
 
 - Node.js 18+
+- pnpm 8.15.0+
 - MetaMask or compatible Web3 wallet
-- Zama testnet tokens (for deployment)
+- Sepolia testnet ETH (get from [Sepolia faucet](https://sepoliafaucet.com/))
 
 ### Installation
 
@@ -178,50 +185,51 @@ git clone https://github.com/watarus/private-credit-score.git
 cd private-credit-score
 
 # Install pnpm (if not already installed)
-npm install -g pnpm
+npm install -g pnpm@8.15.0
 
 # Install dependencies
 pnpm install
-cd frontend && pnpm install && cd ..
-# Or simply: pnpm install (installs all workspaces)
 ```
 
-### Smart Contract Setup
+### Environment Setup
+
+Create a `.env` file in the project root:
 
 ```bash
-# Compile contracts
-pnpm compile
+# Frontend configuration
+NEXT_PUBLIC_CONTRACT_ADDRESS=0xa57722b5e5cA2AC8AbF58fc6ef7f1CC5962346db
+NEXT_PUBLIC_CHAIN_ID=11155111
 
-# Run tests
-pnpm test
-
-# Deploy to local network
-pnpm node  # In one terminal
-pnpm deploy  # In another terminal
-
-# Deploy to localhost (recommended for development)
-pnpm deploy --network localhost
-
-# Deploy to Sepolia testnet (when FHEVM is available)
-# 1. Get Sepolia ETH from faucet
-# 2. Update .env with SEPOLIA_RPC_URL and PRIVATE_KEY
-# pnpm deploy --network sepolia
+# Deployment configuration (optional, for redeployment)
+PRIVATE_KEY=your_private_key_here
+SEPOLIA_RPC_URL=https://eth-sepolia.public.blastapi.io
 ```
 
-### Frontend Setup
+### Start Development Server
 
 ```bash
-cd frontend
-
-# Create .env.local file
-echo "NEXT_PUBLIC_CONTRACT_ADDRESS=YOUR_CONTRACT_ADDRESS" > .env.local
-echo "NEXT_PUBLIC_CHAIN_ID=8009" >> .env.local
-
-# Start development server
+# Start Next.js development server
 pnpm dev
+
+# Or use build mode
+pnpm build
+pnpm start
 ```
 
 Visit `http://localhost:3000` to use the application.
+
+### Smart Contract Deployment
+
+The contract is already deployed on Sepolia testnet. If you want to redeploy:
+
+```bash
+# 1. Update .env with your private key and RPC URL
+# 2. Get Sepolia ETH from faucet
+# 3. Deploy with Hardhat
+npx hardhat run scripts/deploy.js --network sepolia
+
+# 4. Update NEXT_PUBLIC_CONTRACT_ADDRESS in .env
+```
 
 ## 📁 Project Structure
 
@@ -230,22 +238,23 @@ private-credit-score/
 ├── contracts/
 │   └── PrivateCreditScore.sol    # Main FHE contract
 ├── scripts/
-│   └── deploy.js                 # Deployment script
-├── test/
-│   └── PrivateCreditScore.test.js # Contract tests
-├── frontend/
-│   ├── app/
-│   │   ├── page.tsx              # Main page
-│   │   ├── layout.tsx            # Layout wrapper
-│   │   └── globals.css           # Global styles
-│   ├── components/
-│   │   ├── Header.tsx            # Header component
-│   │   ├── CreditScoreForm.tsx   # Data submission form
-│   │   └── StatusCard.tsx        # Status display
-│   └── utils/
-│       └── contract.ts           # Contract interaction
-├── hardhat.config.js             # Hardhat configuration
-└── package.json                  # Project dependencies
+│   └── deploy.ts                 # Deployment script
+├── app/
+│   ├── page.tsx                  # Main page with wallet connection
+│   ├── layout.tsx                # Root layout
+│   └── globals.css               # Global styles
+├── components/
+│   ├── Header.tsx                # Header with wallet connect
+│   ├── CreditScoreForm.tsx       # Credit data submission form
+│   └── StatusCard.tsx            # Loan status display
+├── utils/
+│   ├── contract.ts               # FHEVM SDK integration
+│   ├── walletAnalyzer.ts         # On-chain wallet metrics
+│   └── logger.ts                 # Browser logging
+├── hardhat.config.ts             # Hardhat + FHEVM config
+├── next.config.mjs               # Next.js configuration
+├── deployment.json               # Deployment info
+└── package.json                  # Dependencies
 ```
 
 ## 🔧 Smart Contract API
@@ -253,11 +262,14 @@ private-credit-score/
 ### Core Functions
 
 ```solidity
-// Submit encrypted credit data
+// Submit encrypted credit data (6 encrypted values + proof)
 function submitCreditData(
-    einput _encryptedIncome,
-    einput _encryptedRepaymentRate,
-    einput _encryptedLoanHistory,
+    bytes32 _encryptedIncome,          // externalEuint32
+    bytes32 _encryptedRepaymentRate,   // externalEuint32
+    bytes32 _encryptedLoanHistory,     // externalEuint32
+    bytes32 _encryptedTransactionCount, // externalEuint32
+    bytes32 _encryptedWalletBalance,   // externalEuint32
+    bytes32 _encryptedWalletAge,       // externalEuint32
     bytes calldata inputProof
 ) public
 
@@ -270,8 +282,8 @@ function getLoanStatus() public view returns (bool approved)
 // Check if credit data exists
 function hasCreditData() public view returns (bool exists)
 
-// Get encrypted score (user only)
-function getMyEncryptedScore() public view returns (euint32)
+// Get credit data timestamp
+function getCreditDataTimestamp() public view returns (uint256)
 ```
 
 ### Events
@@ -312,53 +324,55 @@ pnpm test
 ### Building for Production
 
 ```bash
-# Build contracts
-pnpm compile
+# Type check
+pnpm run type-check
 
-# Build frontend
-cd frontend
+# Build Next.js app
 pnpm build
+
+# Start production server
+pnpm start
 ```
 
 ### Linting
 
 ```bash
-# Frontend linting
-cd frontend
 pnpm lint
 ```
 
 ## 🌐 Deployment
 
-### Local Development Deployment
+### Current Deployment
 
-**Note**: Zama does not have a dedicated network. FHEVM runs on existing chains like Ethereum.
+The application is currently deployed on:
+- **Network**: Sepolia Testnet (Chain ID: 11155111)
+- **Contract**: `0xa57722b5e5cA2AC8AbF58fc6ef7f1CC5962346db`
+- **Frontend**: [https://private-credit-score.vercel.app](https://private-credit-score.vercel.app)
 
-1. Start local Hardhat node:
+### Deploy Your Own
+
+1. **Fork the repository**
+
+2. **Deploy to Vercel**:
+   - Connect your GitHub repo to Vercel
+   - Set environment variables:
+     ```
+     NEXT_PUBLIC_CONTRACT_ADDRESS=0xa57722b5e5cA2AC8AbF58fc6ef7f1CC5962346db
+     NEXT_PUBLIC_CHAIN_ID=11155111
+     ```
+   - Deploy!
+
+3. **(Optional) Deploy your own contract**:
    ```bash
-   pnpm node
-   ```
-2. Deploy to localhost:
-   ```bash
-   pnpm deploy --network localhost
-   ```
-3. Update `frontend/.env.local` with deployed contract address:
-   ```bash
-   cd frontend
-   echo "NEXT_PUBLIC_CONTRACT_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3" > .env.local
-   echo "NEXT_PUBLIC_CHAIN_ID=1337" >> .env.local
-   ```
-4. Deploy frontend to Vercel
+   # Configure .env with your wallet
+   PRIVATE_KEY=your_private_key
+   SEPOLIA_RPC_URL=https://eth-sepolia.public.blastapi.io
 
-See [NETWORK_INFO.md](NETWORK_INFO.md) for detailed network information./Netlify
+   # Deploy to Sepolia
+   npx hardhat run scripts/deploy.ts --network sepolia
 
-### Mainnet Considerations
-
-⚠️ **Important**: FHEVM is currently in development. For mainnet deployment:
-- Wait for Zama's mainnet launch
-- Complete security audits
-- Implement proper key management
-- Add rate limiting and gas optimization
+   # Update Vercel environment variable with new address
+   ```
 
 ## 🔒 Security Considerations
 
@@ -381,15 +395,15 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## 🚀 Vercel Deployment
 
-This project is optimized for Vercel deployment. See [VERCEL_DEPLOY.md](VERCEL_DEPLOY.md) for complete deployment guide.
+This project is optimized for Vercel deployment with automatic GitHub integration.
 
 ### Quick Deploy to Vercel
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/watarus/private-credit-score&project-name=private-credit-score&repository-name=private-credit-score&root-directory=frontend&env=NEXT_PUBLIC_CONTRACT_ADDRESS,NEXT_PUBLIC_CHAIN_ID)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/watarus/private-credit-score&project-name=private-credit-score&repository-name=private-credit-score&env=NEXT_PUBLIC_CONTRACT_ADDRESS,NEXT_PUBLIC_CHAIN_ID)
 
 **Environment Variables Required**:
-- `NEXT_PUBLIC_CONTRACT_ADDRESS`: Your deployed contract address
-- `NEXT_PUBLIC_CHAIN_ID`: `8009` (Zama Devnet)
+- `NEXT_PUBLIC_CONTRACT_ADDRESS`: `0xa57722b5e5cA2AC8AbF58fc6ef7f1CC5962346db`
+- `NEXT_PUBLIC_CHAIN_ID`: `11155111` (Sepolia)
 
 ## 📄 License
 
@@ -398,14 +412,16 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🙏 Acknowledgments
 
 - **Zama** for pioneering FHE technology and FHEVM
-- The **fhevm** and **fhevm-core-contracts** libraries
+- The **@fhevm/solidity** and **@zama-fhe/relayer-sdk** libraries
 - Inspiration from traditional credit scoring systems
 
 ## 📚 Resources
 
 - [Zama Documentation](https://docs.zama.ai/)
 - [FHEVM GitHub](https://github.com/zama-ai/fhevm)
-- [fhevmjs SDK](https://github.com/zama-ai/fhevmjs)
+- [Relayer SDK](https://www.npmjs.com/package/@zama-fhe/relayer-sdk)
+- [@fhevm/solidity](https://www.npmjs.com/package/@fhevm/solidity)
+- [Sepolia Testnet](https://sepolia.etherscan.io/)
 - [Zama Discord](https://discord.com/invite/zama)
 
 ## 📞 Contact
