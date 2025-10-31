@@ -7,6 +7,9 @@ export const metadata: Metadata = {
   description: "Privacy-preserving credit scoring system built with Zama's FHEVM",
 };
 
+// Force dynamic rendering to prevent SSR issues
+export const dynamic = 'force-dynamic';
+
 export default function RootLayout({
   children,
 }: Readonly<{
