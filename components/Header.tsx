@@ -1,3 +1,5 @@
+"use client";
+
 interface HeaderProps {
   account: string | null;
   onConnect: () => void;

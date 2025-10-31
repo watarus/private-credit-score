@@ -1,17 +1,27 @@
-import pino from 'pino';
+"use client";
 
-const isDevelopment = process.env.NODE_ENV === 'development';
+// Simple browser-only logger
+const isDevelopment = typeof window !== "undefined" && process.env.NODE_ENV === "development";
 
-// Use browser-compatible logging
-export const logger = pino({
-  level: isDevelopment ? 'debug' : 'info',
-  browser: {
-    asObject: true,
-    write: {
-      info: (o: any) => console.info(o),
-      error: (o: any) => console.error(o),
-      warn: (o: any) => console.warn(o),
-      debug: (o: any) => console.debug(o),
-    },
+export const logger = {
+  info: (message: any, ...args: any[]) => {
+    if (typeof window !== "undefined") {
+      console.info("[INFO]", message, ...args);
+    }
   },
-});
+  error: (message: any, ...args: any[]) => {
+    if (typeof window !== "undefined") {
+      console.error("[ERROR]", message, ...args);
+    }
+  },
+  warn: (message: any, ...args: any[]) => {
+    if (typeof window !== "undefined") {
+      console.warn("[WARN]", message, ...args);
+    }
+  },
+  debug: (message: any, ...args: any[]) => {
+    if (typeof window !== "undefined" && isDevelopment) {
+      console.debug("[DEBUG]", message, ...args);
+    }
+  },
+};

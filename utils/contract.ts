@@ -20,9 +20,10 @@ const CONTRACT_ABI = [
 ];
 
 // Contract address (should be set after deployment)
-const CONTRACT_ADDRESS =
+const CONTRACT_ADDRESS = (
   process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ??
-  "0x0000000000000000000000000000000000000000";
+  "0x0000000000000000000000000000000000000000"
+).trim();
 
 // FHEVM instance cache
 let fhevmInstance: FhevmInstance | null = null;

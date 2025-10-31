@@ -2,13 +2,23 @@
 
 import { useState, useEffect } from "react";
 import { ethers } from "ethers";
-import CreditScoreForm from "@/components/CreditScoreForm";
-import StatusCard from "@/components/StatusCard";
+import nextDynamic from "next/dynamic";
 import Header from "@/components/Header";
 import { logger } from "@/utils/logger";
 
 // Force dynamic rendering to avoid SSR issues with browser-only SDK
 export const dynamic = 'force-dynamic';
+
+// Dynamically import components that use FHEVM SDK (client-side only)
+const CreditScoreForm = nextDynamic(() => import("@/components/CreditScoreForm"), {
+  ssr: false,
+  loading: () => <div className="glass-effect rounded-2xl p-8 text-white">Loading...</div>
+});
+
+const StatusCard = nextDynamic(() => import("@/components/StatusCard"), {
+  ssr: false,
+  loading: () => <div className="glass-effect rounded-2xl p-8 text-white">Loading...</div>
+});
 
 export default function Home() {
   const [account, setAccount] = useState<string | null>(null);

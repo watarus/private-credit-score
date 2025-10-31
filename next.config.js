@@ -10,15 +10,24 @@ const nextConfig = {
   experimental: {
     esmExternals: 'loose',
   },
+  // Disable minification for easier debugging
+  swcMinify: false,
+  compiler: {
+    removeConsole: false,
+  },
   webpack: (config, { isServer }) => {
+    // Disable minification for debugging
+    config.optimization.minimize = false;
+
     // Exclude @zama-fhe/relayer-sdk and related packages from server-side rendering
     if (isServer) {
-      config.externals.push({
-        '@zama-fhe/relayer-sdk': 'commonjs @zama-fhe/relayer-sdk',
-        '@zama-fhe/relayer-sdk/web': 'commonjs @zama-fhe/relayer-sdk/web',
-        'tfhe': 'commonjs tfhe',
-        'tkms': 'commonjs tkms',
-      });
+      // More aggressive external configuration
+      config.externals = [
+        ...config.externals,
+        /@zama-fhe\/.*/,
+        /tfhe/,
+        /tkms/,
+      ];
     } else {
       // For client-side, provide polyfills for Node.js globals
       config.resolve.fallback = {
@@ -58,7 +67,7 @@ const nextConfig = {
     // Add ProvidePlugin to provide global for browser environment
     config.plugins.push(
       new webpack.ProvidePlugin({
-        global: 'global/window',
+        global: path.resolve(__dirname, "polyfills/global.js"),
       })
     );
 
@@ -67,3 +76,4 @@ const nextConfig = {
 };
 
 module.exports = nextConfig;
+// Force rebuild 2025年 11月 1日 土曜日 04時01分41秒 JST
