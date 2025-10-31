@@ -3,6 +3,8 @@ pragma solidity ^0.8.25;
 
 import {FHE, euint32, ebool, externalEuint32} from "@fhevm/solidity/lib/FHE.sol";
 import {SepoliaConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
+import {DecryptionOracle} from "@zama-fhe/oracle-solidity/contracts/DecryptionOracle.sol";
+import {SepoliaZamaOracleAddress} from "@zama-fhe/oracle-solidity/address/ZamaOracleAddress.sol";
 
 /**
  * @title PrivateCreditScore
@@ -31,9 +33,15 @@ contract PrivateCreditScore is SepoliaConfig {
     
     // Mapping from user address to their encrypted credit data
     mapping(address => EncryptedCreditData) private userCreditData;
-    
+
     // Mapping to track approved loans
     mapping(address => bool) public approvedLoans;
+
+    // Counter for decryption requests
+    uint256 private decryptionRequestCounter;
+
+    // Mapping from requestID to user address
+    mapping(uint256 => address) private requestIDToUser;
     
     // Events
     event CreditDataSubmitted(address indexed user, uint256 timestamp);
@@ -143,8 +151,7 @@ contract PrivateCreditScore is SepoliaConfig {
     
     /**
      * @notice Evaluate credit score and approve/reject loan application
-     * @dev Performs comparison on encrypted data
-     * @dev Note: This is a simplified version. Production would use Gateway for decryption.
+     * @dev Requests decryption from Gateway Oracle
      */
     function evaluateLoan() public {
         require(userCreditData[msg.sender].exists, "No credit data submitted");
@@ -155,21 +162,26 @@ contract PrivateCreditScore is SepoliaConfig {
         ebool isEligible = FHE.ge(userData.calculatedScore, minScoreThreshold);
         FHE.allowThis(isEligible);
 
-        // TODO: Integrate with Gateway callbacks to obtain decrypted result
-        // The Gateway will call back with the decrypted result
-        // For now, this demonstration omits Gateway integration
-        // In production, you would:
-        // 1. Request decryption from Gateway
-        // 2. Gateway decrypts using its private key
-        // 3. Gateway calls back with the boolean result
-        // 4. Update approvedLoans based on that result
+        // Get the DecryptionOracle instance
+        DecryptionOracle oracle = DecryptionOracle(SepoliaZamaOracleAddress);
 
-        // Placeholder: mark as rejected until Gateway integration
-        bool approved = false;
-        approvedLoans[msg.sender] = approved;
+        // Prepare the handles array for decryption
+        // ebool is internally a handle (uint256), convert to bytes32
+        bytes32[] memory handles = new bytes32[](1);
+        handles[0] = bytes32(ebool.unwrap(isEligible));
 
-        // Note: In production, emit events in the Gateway callback
-        emit LoanRejected(msg.sender, block.timestamp);
+        // Generate unique requestID
+        uint256 requestID = decryptionRequestCounter++;
+
+        // Store mapping from requestID to user
+        requestIDToUser[requestID] = msg.sender;
+
+        // Request decryption from Gateway
+        oracle.requestDecryption(
+            requestID,
+            handles,
+            this.loanApprovalCallback.selector
+        );
     }
     
     /**
@@ -179,7 +191,34 @@ contract PrivateCreditScore is SepoliaConfig {
     function getLoanStatus() public view returns (bool approved) {
         return approvedLoans[msg.sender];
     }
-    
+
+    /**
+     * @notice Callback function called by Gateway Oracle with decrypted result
+     * @param requestID The request ID from evaluateLoan
+     * @param decryptedValue The decrypted boolean result (true if eligible, false otherwise)
+     */
+    function loanApprovalCallback(uint256 requestID, bool decryptedValue) public {
+        // Only allow Gateway Oracle to call this function
+        require(msg.sender == SepoliaZamaOracleAddress, "Only Gateway can call this");
+
+        // Get the user address from the requestID
+        address user = requestIDToUser[requestID];
+        require(user != address(0), "Invalid requestID");
+
+        // Update the loan approval status
+        approvedLoans[user] = decryptedValue;
+
+        // Emit appropriate event
+        if (decryptedValue) {
+            emit LoanApproved(user, block.timestamp);
+        } else {
+            emit LoanRejected(user, block.timestamp);
+        }
+
+        // Clean up the mapping
+        delete requestIDToUser[requestID];
+    }
+
     /**
      * @notice Check if user has submitted credit data
      * @return exists Whether credit data exists for the user
